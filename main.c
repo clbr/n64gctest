@@ -95,7 +95,7 @@ enum {
 int main(void)
 {
 	display_context_t disp;
-	struct controller_data ctrl;
+	struct controller_data ctrl, prevctrl;
 	char buf[64];
 	u32 i;
 	u8 type[4];
@@ -201,10 +201,15 @@ int main(void)
 					ctrl.gc[i].x ? "X" : "",
 					ctrl.gc[i].y ? "Y" : "");
 				printText(disp, buf, 6, 5 + i * 6 + 3);
+
+				if (ctrl.gc[i].start && !prevctrl.gc[i].start)
+					rumble[i] ^= 1;
 			}
 		}
 
 		unlockVideo(disp);
+
+		memcpy(&prevctrl, &ctrl, sizeof(struct controller_data));
 
 		delay(1);
 	}
