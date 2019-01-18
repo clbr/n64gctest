@@ -1,0 +1,320 @@
+9  Joy-Bus Devices
+
+   [1]index
+
+  9.1  ID and Device List
+
+   The device ID can be read by sending the SI Command 0x00, and then
+   reading 3 bytes from the respective device. The response-data looks
+   like this:
+   first comes a 16bit device id:
+
+     ID   Device
+   0x0500 ? N64 Controller
+   0x0001 ? N64 Microphone
+   0x0002 ? N64 Keyboard
+   0x0200 ? N64 Mouse
+   0x0004 GBA
+   0x0800 GBA (n/a)
+   0x0900 GC Standard Controller
+   0xe960 ? GC Wavebird Receiver
+   0xe9a0 ? GC Wavebird
+   0xa800 ? GC Wavebird
+   0xebb0 ? GC Wavebird
+   0x0820 GC Keyboard
+   0x0800 ? GC Steering Wheel
+   0x0900 DKongas (same as std Controller)
+     ?    Resident Evil4 Chainsaw
+
+   bit(s)   description
+     15     wireless (1: wireless Controller)
+     14     wireless receive (0: not wireless 1: wireless)
+     13     Rumble Motor (0: available 1: not available)
+     12     Type of Controller (always 0 ?)
+     11     Type of Controller (0: N64 1: Dolphin)
+     10     wireless type (0:IF 1:RF)
+     9      wireless state (0: variable 1: fixed)
+     8      0: non standard Controller 1: Dolphin Standard Controller
+     7
+     6
+     5      wireless origin (0:invalid 1:valid)
+     4      wireless fix id (0:not fixed 1:fixed)
+     3      wireless type - 0:normal 1: non-controller (?)
+     2      wireless type - 0:normal 1: lite controller
+     1      wireless type -
+     0      wireless type -
+
+
+
+   the device id is followed by 8 status bits:
+
+   bit(s)   description
+     7      ?
+     6      ?
+     5      ?
+     4      ?
+     3      ? rumble motor running
+     2      ?
+     1      ?
+     0      ?
+
+   [2]index
+
+  9.2  standard Controller
+
+   [3]index
+
+    9.2.1  Init
+
+     * enable all controllers in 0xcc006430
+     * set Joy-channel 1-4 Command Register to 0x00400300
+     * clear SI i/o buffer
+     * wait until bit 31 of 0xCC006434 is 0, then set it to 1
+
+   Command Word 0x00400000 - enable polling 0x00000300 - ? 0x00000100 - ?
+   0x00000001 - enable rumble motor
+   Commands: 0x00 - get id+status 0x40 - ? 0x41 - get origins 0x42 -
+   calibrate ?
+
+   [4]index
+
+    9.2.2  Read Controller Status
+
+     * simply read all Joy-channel registers and extract the info you want
+
+   first input word
+   bit(s)   Description
+     31     ERRSTAT - (assumed 0)
+     30     ERRLATCH - (assumed 0)
+     29     unused (?)
+     28   s Start Button
+     27   y Y Button
+     26   x X Button
+     25   b B Button
+     24   a A Button
+     23     unused (?)
+     22   L L Trigger
+     21   R R Trigger
+     20     Z Trigger
+     19   u D-Pad Up
+     18   d D-Pad Down
+     17   r D-Pad Right
+     16   l D-Pad Left
+    8-15  x Analog Stick X (8bit unsigned, ~32...128...~224)
+    0-7   y Analog Stick Y (8bit unsigned, ~32...128...~224)
+
+   second input word
+   bit(s)   Description
+   24-31  x Analog C Stick X (8bit unsigned, ~32...128...~224)
+   16-23  y Analog C Stick Y (8bit unsigned, ~32...128...~224)
+    8-15  l L Trigger Analog (8bit unsigned, ~32...~224)
+    0-7   r R Trigger Analog (8bit unsigned, ~32...~224)
+
+   [5]index
+
+    9.2.3  rumble Motor On
+
+   *(volatile unsigned long*)0xCC006400 = 0x00400001; *(volatile unsigned
+   long*)0xCC006438 = 0x80000000;
+
+   [6]index
+
+    9.2.4  rumble Motor Off
+
+   *(volatile unsigned long*)0xCC006400 = 0x00400000; *(volatile unsigned
+   long*)0xCC006438 = 0x80000000;
+
+   [7]index
+
+  9.3  Keyboard
+
+   [8]index
+
+    9.3.1  Types
+
+      9.3.1.1   ASCII
+
+   Official Nintendo/SEGA keyboard for the GameCube. It has 80 keys plus
+   an Fn key, some of the keys have Japanese labelings. It has an LShift
+   and an RShift key, but only a single Ctrl and Alt key. The Fn key is
+   internal to the keyboard. It makes the keyboard send different
+   scancodes if it is pressed, and an Fn keypress alone cannot be
+   detected.
+
+      9.3.1.2   Datel
+
+   A British IBM PS/2 keyboard that ships with an adapter.
+
+      9.3.1.3   Tototek Adapter
+
+   Converts the IBM PS/2 protocol to the GameCube SI protocol and also
+   converts the PS/2 scancodes into GameCube scancodes. The keys that have
+   Japanese labelings on the ASCII keyboard get mapped to keys like
+   PrintScreen and Pause.
+     * 0-9 and Enter send the scancodes of their counterparts on the
+       alphanumeric part of the keyboard, regardless of the status of
+       NumLock, so the Numpad cannot be used as cursor keys.
+     * The key right of LShift on non-US keyboards sends no scancode.
+     * The Pause/SysReq key only sends the keycode of 0x37 once, even if
+       it's pressed down continuously.
+     * Numpad-* sends 0x37, the same as Pause/SysReq, but this one
+       continues sending it.
+     * All combinations of Pause/SysReq with other keys are possible,
+       except for these: LStrg or LStrg together with Pause/SysReq doesn't
+       send anything. This would have been SysReq.
+     * The adapter easily gets confused by two keys for which it produces
+       the same GameCube scancodes: If you hold down LStrg and press
+       RStrg, the LStrg scancode will disappear even though LStrg is srill
+       pressed down. The same is true for Ctrl and Alt.
+
+   [9]index
+
+    9.3.2  Scancodes
+
+     .0 .1 .2 .3 .4 .5 .6 .7
+   0.             Home End
+   1. A B C D E F G H
+   2. Q R S T U V W X
+
+   3. 7 8 9 0 -_ () =+ PrntScrn Pause/SysReq
+     NP 7 NP 8 NP 9 NP 0 NP -   NP / NP *
+   4. F1 F2 F3 F4 F5 F6 F7 F8
+   5. Backspace Tab   CapsLock LShift (*54)   LCtrl (*56) LAlt (*57)
+   6.   Enter
+       NP Enter
+     .8 .9 .A .B .C .D .E .F
+   0. PgUp PgDn ScrollLock
+   1. I J K L M N O P
+   2. Y Z 1 2 3 4 5 6
+         NP 1 NP 2 NP 3 NP 4 NP 5 NP 6
+   3. [{ ;: " ]} ,< .> /? -
+       NP + (*39)       NP .
+   4. F9 F10 F11 F!2 ESC Ins Del `~
+   5. LWin space RWin Menu Left Down Up Right
+   6.
+         NumLock (*6a)
+
+   (*39) Tototek adapter: makes only sence for japenese ASCII labeling
+   (*54) Tototek adapter sends this code for LShift and RShift
+   (*56) Tototek adapter sends this code for LCtrl and RCtrl
+   (*57) Tototek adapter sends this code for LAlt and RAlt
+   (*6a) Tototek adapter: undefined for GameCube
+
+   [10]index
+
+    9.3.3  Init
+
+     * enable controller in 0xcc006430
+     * set Joy-channel Command Register to 0x00540000
+     * clear SI i/o buffer
+     * wait until bit 31 of 0xCC006434 is 0, then set it to 1
+
+   Command Word 0x00540000 - enable polling
+
+   [11]index
+
+    9.3.4  Read Keyboard
+
+   first input word
+   bit(s)   Description
+     31     ERRSTAT - (assumed 0)
+     30     ERRLATCH - (assumed 0)
+   24-29    ?
+   16-23    ?
+    8-15    ?
+    0-7     ?
+
+   second input word
+   bit(s)   Description
+   24-31    key1
+   16-23    key2
+    8-15    key3
+    0-7     ?
+
+   [12]index
+
+  9.4  GBA
+
+   to do
+
+   [13]index
+
+  9.5  Wavebird
+
+   to do
+
+   [14]index
+
+  9.6  steering wheel
+
+   to do
+
+   [15]index
+
+  9.7  DKongas
+
+   These work exactly like the standard controllers from the programmers
+   point of view, and they even have the same ID.
+
+   [16]index
+
+    9.7.1  Read Controller Status
+
+     * simply read all Joy-channel registers and extract the info you want
+
+   first input word
+   bit(s)   Description
+     31     ERRSTAT - (assumed 0)
+     30     ERRLATCH - (assumed 0)
+     29     unused (?)
+     28   s Start Button
+     27   y left Konga, top/left (Y Button)
+     26   x right Konga, top/left (X Button)
+     25   b left Konga, bottom/right (B Button)
+     24   a right Konga, bottom/right (A Button)
+     23     unused (?)
+     22   L unused (L Trigger)
+     21   R unused ? (R Trigger)
+     20     unused (Z Trigger)
+     19   u unused (D-Pad Up)
+     18   d unused (D-Pad Down)
+     17   r unused (D-Pad Right)
+     16   l unused (D-Pad Left)
+    8-15  x unused (Analog Stick X)
+    0-7   y unused (Analog Stick Y)
+
+   second input word
+   bit(s)   Description
+   24-31  x unused (Analog C Stick X)
+   16-23  y unused (Analog C Stick Y)
+    8-15  l unused (L Trigger Analog)
+    0-7   r Microphone (R Trigger Analog) (8bit unsigned, ~16...?)
+
+   [17]index
+
+  9.8  Resident Evil4 Chainsaw
+
+   to do
+
+   [18]index
+
+References
+
+   1. http://hitmen.c02.at/files/yagcd/yagcd/index.html#idx9.1
+   2. http://hitmen.c02.at/files/yagcd/yagcd/index.html#idx9.2
+   3. http://hitmen.c02.at/files/yagcd/yagcd/index.html#idx9.2.1
+   4. http://hitmen.c02.at/files/yagcd/yagcd/index.html#idx9.2.2
+   5. http://hitmen.c02.at/files/yagcd/yagcd/index.html#idx9.2.3
+   6. http://hitmen.c02.at/files/yagcd/yagcd/index.html#idx9.2.4
+   7. http://hitmen.c02.at/files/yagcd/yagcd/index.html#idx9.3
+   8. http://hitmen.c02.at/files/yagcd/yagcd/index.html#idx9.3.1
+   9. http://hitmen.c02.at/files/yagcd/yagcd/index.html#idx9.3.2
+  10. http://hitmen.c02.at/files/yagcd/yagcd/index.html#idx9.3.3
+  11. http://hitmen.c02.at/files/yagcd/yagcd/index.html#idx9.3.4
+  12. http://hitmen.c02.at/files/yagcd/yagcd/index.html#idx9.4
+  13. http://hitmen.c02.at/files/yagcd/yagcd/index.html#idx9.5
+  14. http://hitmen.c02.at/files/yagcd/yagcd/index.html#idx9.6
+  15. http://hitmen.c02.at/files/yagcd/yagcd/index.html#idx9.7
+  16. http://hitmen.c02.at/files/yagcd/yagcd/index.html#idx9.7.1
+  17. http://hitmen.c02.at/files/yagcd/yagcd/index.html#idx9.8
+  18. http://hitmen.c02.at/files/yagcd/yagcd/index.html#idx10
