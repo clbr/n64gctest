@@ -96,6 +96,7 @@ int main(void)
 {
 	display_context_t disp;
 	struct controller_data ctrl, prevctrl;
+	struct controller_origin_data orig;
 	char buf[64];
 	u32 i;
 	u8 type[4];
@@ -139,7 +140,7 @@ int main(void)
 		graphics_set_color(color, 0);
 
 		printText(disp, "Nintendo 64 GC controller test v0.1, (C) TMI", 4, 2);
-		printText(disp, "Press start to toggle rumble (only for GC).", 4, 3);
+		printText(disp, "Press start to toggle rumble, X to check origins (only GC)", 4, 3);
 
 		for (i = 0; i < 4; i++) {
 			if (err[i]) {
@@ -202,8 +203,24 @@ int main(void)
 					ctrl.gc[i].y ? "Y" : "");
 				printText(disp, buf, 6, 5 + i * 6 + 3);
 
+				if (ctrl.gc[i].origin_unchecked)
+					sprintf(buf, "origin unchecked");
+				else
+					sprintf(buf, "origin vals: %3u %3u C %3u %3u LR %3u %3u dead %3u %3u",
+						orig.gc[i].data.stick_x,
+						orig.gc[i].data.stick_y,
+						orig.gc[i].data.cstick_x,
+						orig.gc[i].data.cstick_y,
+						orig.gc[i].data.analog_l,
+						orig.gc[i].data.analog_r,
+						orig.gc[i].deadzone0,
+						orig.gc[i].deadzone1);
+				printText(disp, buf, 6, 5 + i * 6 + 4);
+
 				if (ctrl.gc[i].start && !prevctrl.gc[i].start)
 					rumble[i] ^= 1;
+				if (ctrl.gc[i].x && !prevctrl.gc[i].x)
+					controller_read_gc_origin(&orig);
 			}
 		}
 
