@@ -1,0 +1,5 @@
+N64 GC controller test
+======================
+
+This is a simple controller test for the N64, supporting four controllers at once,
+and any of them can be either a N64 or a GC controller.
